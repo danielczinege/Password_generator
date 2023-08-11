@@ -3,6 +3,8 @@
 #include <stdbool.h>
 #include <string.h>
 
+#include "password_tools.h"
+
 int main(int argc, char *argv[])
 {
     if (argc != 1) {
@@ -51,7 +53,10 @@ int main(int argc, char *argv[])
                 //TODO call generation of passwords
                 break;
             case '2':
-                //TODO call strength checker
+                if (! password_strength()) {
+                    free(response);
+                    return EXIT_FAILURE;
+                }
                 break;
             case '3':
                 //TODO call storing
@@ -79,7 +84,9 @@ int main(int argc, char *argv[])
                        "Or you can incorporate shortcuts or acronyms.\n"
                        "- Use phrases that mean something to you and shorten them by using shortcuts\n"
                        "(e.g 2BorNot2B_ThatisThe? (To be or not to be, that is the question-Shakespeare),\n"
-                       " 1gbeFnw8f:)              (I go bowling every Friday night with 8 friends)\n");
+                       " 1gbeFnw8f:)              (I go bowling every Friday night with 8 friends)\n"
+                       "\n"
+                       "Or you can use a password manager to manage your passwords, with this you can use completely random passwords\n");
                 break;
             case '6':
                 free(response);
