@@ -57,6 +57,14 @@ int main(int argc, char *argv[])
                     free(response);
                     return EXIT_FAILURE;
                 }
+                printf("But if this test says your password is strong it still might be weak.\n"
+                       "For example if your password consists of some regular word, even with some\n"
+                       "commonly used substitutions and few numbers after it, it still can be weak.\n"
+                       "Example of password that is hard to find by randomly selecting passwords, but\n"
+                       "is easy to find if attacker tries a different technique is P@ssw0rd123!\n"
+                       "If you have a similar password I suggest looking at some help on making more\n"
+                       "secure passwords.\n"
+                       "\n");
                 break;
             case '3':
                 //TODO call storing
@@ -86,7 +94,7 @@ int main(int argc, char *argv[])
                        "(e.g 2BorNot2B_ThatisThe? (To be or not to be, that is the question-Shakespeare),\n"
                        " 1gbeFnw8f:)              (I go bowling every Friday night with 8 friends)\n"
                        "\n"
-                       "Or you can use a password manager to manage your passwords, with this you can use completely random passwords\n");
+                       "Or you can use a password manager to manage your passwords, with this you can use completely random passwords.\n");
                 break;
             case '6':
                 free(response);
