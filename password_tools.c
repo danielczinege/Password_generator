@@ -1,5 +1,11 @@
 #include "password_tools.h"
 
+/**
+ * @brief Asks for a password, calculates its entropy and uses it to tell the strength of the password.
+ *        The strength is written in bold.
+ * @note After entropy calculation the password is overwritten and the memory is freed.
+ * @return true on success, false on failure
+ */
 bool password_strength(void)
 {
     bool upper = false;
@@ -49,6 +55,7 @@ bool password_strength(void)
                 upper = true;
                 char_range += LETTER_COUNT;
             }
+            password[i] = '\0';
             continue;
         }
 
@@ -57,6 +64,7 @@ bool password_strength(void)
                 lower = true;
                 char_range += LETTER_COUNT;
             }
+            password[i] = '\0';
             continue;
         }
 
@@ -65,6 +73,7 @@ bool password_strength(void)
                 digits = true;
                 char_range += DIGIT_COUNT;
             }
+            password[i] = '\0';
             continue;
         }
 
@@ -72,7 +81,11 @@ bool password_strength(void)
             special = true;
             char_range += SPECIAL_CHARS;
         }
+        password[i] = '\0';
     }
+
+    memset(password, 0, MAX_PASSWORD_LENGTH);
+    free(password);
 
     double password_entropy = length * log2(char_range);
 
@@ -89,8 +102,5 @@ bool password_strength(void)
     }
 
     printf("\e[m.\n");
-
-    memset(password, 0, MAX_PASSWORD_LENGTH);
-    free(password);
     return true;
 }

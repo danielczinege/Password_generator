@@ -41,7 +41,8 @@ int main(int argc, char *argv[])
             return EXIT_FAILURE;
         }
 
-        if (response[0] == '\0' || (response[1] != '\n' && response[2] != '\0')) {
+        //Checks if the response is one character.
+        if (response[0] == '\0' || (response[1] != '\n' && response[1] != '\0')) {
             fprintf(stderr, "_________________________________________\n"
                             "You must choose a number between 1 and 6.\n"
                             "_________________________________________\n");
