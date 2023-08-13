@@ -13,7 +13,6 @@ int main(int argc, char *argv[])
     }
 
     int response_capacity = 8;
-    int response_length = 0;
     char *response = malloc(response_capacity * sizeof(char));
 
     if (response == NULL) {
@@ -51,7 +50,7 @@ int main(int argc, char *argv[])
 
         switch (response[0]) {
             case '1':
-                //TODO call generation of passwords
+                generate_passwords(&rand_initialized);
                 break;
             case '2':
                 if (! password_strength()) {
