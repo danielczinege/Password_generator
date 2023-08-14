@@ -1,41 +1,40 @@
 #include "password_tools.h"
 
-bool generate_passwords(bool *rand_initialized)
+#define CHAR_POOL_LENGTH ('~' - ' ' + 1)
+
+/**
+ *
+ * @param response Has to be allocated memory. After failure you have to free it.
+ * @param response_capacity Capacity of response.
+ * @param length Pointer to length variable, where will be the desired length stored.
+ * @return true if successful, false otherwise.
+ */
+bool get_password_length(char *response, int response_capacity, long *length)
 {
-    int response_capacity = MAX_CHAR_RANGE;
-    char *response = malloc(response_capacity * sizeof(char));
-
-    if (response == NULL) {
-        fprintf(stderr, "malloc failed\n");
-        return false;
-    }
-
-    long length = 0;
-
-    while (8 >= length || length >= 1000) {
+    while (8 > *length || *length >= 1000) {
         printf("How long do you want your password to be?\n");
 
         if (fgets(response, response_capacity, stdin) == NULL) {
             fprintf(stderr, "failed to read response\n");
-            free(response);
             return false;
         }
 
         char *end = response;
-        length = strtol(response, &end, 10);
+        *length = strtol(response, &end, 10);
 
-        if (length >= 1000 || 8 >= length || (*end != '\n' && *end != '\0')) {
-            fprintf(stderr, "You should enter a number between 1 and 999, included.");
+        if (*length >= 1000 || 8 > *length || (*end != '\n' && *end != '\0')) {
+            fprintf(stderr, "You should enter a number between 8 and 999, included.\n");
+            *length = 0;
+            continue;
         }
 
-        if (8 < length && length < 12) {
+        if (8 <= *length && *length < 14) {
             printf("If you want to have a strong password I recommend having at least 14 characters.\n");
             bool change_password = false;
             while (true) {
                 printf("Would you like to change the password length to some higher number? [y/n]\n");
                 if (fgets(response, response_capacity, stdin) == NULL) {
                     fprintf(stderr, "failed to read response\n");
-                    free(response);
                     return false;
                 }
                 if (strlen(response) != 2) {
@@ -50,12 +49,25 @@ bool generate_passwords(bool *rand_initialized)
                 }
             }
             if (change_password) {
+                *length = 0;
                 continue;
             }
         }
     }
+    return true;
+}
 
-    printf("Write which characters you don't want. Characters that are automatically included are all ASCII characters,\n"
+/**
+ *
+ * @param response Has to be allocated memory. After failure you have to free it.
+ * @param response_capacity Capacity of response.
+ * @param character_pool Has to be allocated memory with length equal to CHAR_POOL_LENGTH = '~' - ' ' + 1.
+ *                       To fit all the characters. After failure you have to free it.
+ * @return true if successful, false otherwise.
+ */
+bool get_character_pool(char *response, int response_capacity, char *character_pool)
+{
+    printf("\nWrite which characters you don't want. Characters that are automatically included are all ASCII characters,\n"
            "those are all upper and lower case letters, all digits, space and these special characters:\n");
     for (int chr = '!'; chr <= '/'; chr++) {
         putchar(chr);
@@ -75,15 +87,6 @@ bool generate_passwords(bool *rand_initialized)
 
     if (fgets(response, response_capacity, stdin) == NULL) {
         fprintf(stderr, "failed to read response\n");
-        free(response);
-        return false;
-    }
-
-    int char_pool_length = '~' - ' ' + 1;
-    char *character_pool = malloc( char_pool_length * sizeof(char));
-    if (character_pool == NULL) {
-        fprintf(stderr, "failed to allocate memory\n");
-        free(response);
         return false;
     }
 
@@ -94,21 +97,21 @@ bool generate_passwords(bool *rand_initialized)
     int left = 0;
     while (response[left] != '\n' && response[left] != '\0') {
         if (' ' <= response[left] && response[left] <= '~') {
-            character_pool[response[left] - ' '] = '\0';
+            character_pool[response[left] - ' '] = '\1';
         }
         left++;
     }
 
     left = 0;
-    int right = char_pool_length - 1;
+    int right = CHAR_POOL_LENGTH - 1;
 
     while (left < right) {
-        if (character_pool[left] != '\0') {
+        if (character_pool[left] != '\1') {
             left++;
             continue;
         }
 
-        while (left < right && character_pool[right] == '\0') {
+        while (left < right && character_pool[right] == '\1') {
             right--;
         }
         if (left == right) {
@@ -116,14 +119,49 @@ bool generate_passwords(bool *rand_initialized)
         }
 
         character_pool[left] = character_pool[right];
-        character_pool[right] = '\0';
+        character_pool[right] = '\1';
         right--;
         left++;
     }
-    if (character_pool[left] == '\0') {
+    if (character_pool[left] == '\1') {
         left--;
     }
-    //TODO - debug this
+    return true;
+}
+
+bool generate_passwords(bool *rand_initialized)
+{
+    int response_capacity = MAX_CHAR_RANGE;
+    char *response = malloc(response_capacity * sizeof(char));
+
+    if (response == NULL) {
+        fprintf(stderr, "malloc failed\n");
+        return false;
+    }
+
+    long length = 0;
+
+    if (! get_password_length(response, response_capacity, &length)) {
+        fprintf(stderr, "failed to get password length\n");
+        free(response);
+        return false;
+    }
+
+    char *character_pool = malloc( CHAR_POOL_LENGTH * sizeof(char));
+
+    if (character_pool == NULL) {
+        fprintf(stderr, "failed to allocate memory\n");
+        free(response);
+        return false;
+    }
+
+    if (! get_character_pool(response, response_capacity, character_pool)) {
+        free(response);
+        free(character_pool);
+        return false;
+    }
+
+    //TODO generation
     return true;
 }
 
