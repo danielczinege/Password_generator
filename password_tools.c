@@ -1,4 +1,5 @@
 #include "password_tools.h"
+#include <openssl/rand.h>
 
 #define CHAR_POOL_LENGTH ('~' - ' ' + 1)
 
@@ -129,6 +130,51 @@ bool get_character_pool(char *response, int response_capacity, char *character_p
     return true;
 }
 
+bool initialize_generator(bool *rand_initialized)
+{
+    if (*rand_initialized) {
+        return true;
+    }
+
+    if (RAND_poll() == 0) {
+        fprintf(stderr, "Error initializing OpenSSL.\n");
+        return false;
+    }
+
+    if (RAND_status() == 0) {
+        fprintf(stderr, "Insufficient entropy for secure random numbers.\n"
+                        "Wait a bit before trying again.\n");
+        return false;
+    }
+
+    *rand_initialized = true;
+    return true;
+}
+
+bool generate_password(char *response, char *character_pool, long length)
+{
+    unsigned char *random_bytes = malloc(length * sizeof(unsigned char));
+    if (random_bytes == NULL) {
+        fprintf(stderr, "malloc failed\n");
+        return false;
+    }
+
+    char *password = malloc((length + 1) * sizeof(char));
+    if (password == NULL) {
+        free(random_bytes);
+        fprintf(stderr, "failed to allocate memory for password\n");
+        return false;
+    }
+
+    if (RAND_bytes(random_bytes, length) != 1) {
+        fprintf(stderr, "failed to generate random numbers\n");
+        free(random_bytes);
+        free(password);
+        return false;
+    }
+    //TODO finish
+}
+
 bool generate_passwords(bool *rand_initialized)
 {
     int response_capacity = MAX_CHAR_RANGE;
@@ -161,7 +207,16 @@ bool generate_passwords(bool *rand_initialized)
         return false;
     }
 
-    //TODO generation
+    if (! initialize_generator(rand_initialized)) {
+        free(response);
+        free(character_pool);
+        return false;
+    }
+
+    while (true) {
+
+    }
+
     return true;
 }
 
