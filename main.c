@@ -23,16 +23,17 @@ int main(int argc, char *argv[])
     bool rand_initialized = false;
 
     printf("This is a password generator, that can also estimate strength of your passwords or\n"
-           "store your passwords in encrypted file, if you wish.\n");
+           "store your passwords in NOT ENCRYPTED FORM, which I don't recommend. (this feature was implemented just for fun)\n");
 
     while (true) {
         printf("\nWhat do you want to do: (write the number)\n"
                "1 - generate passwords\n"
                "2 - check password strength\n"
-               "3 - store passwords in encrypted file\n"
-               "4 - get password from encrypted file\n"
-               "5 - get help on making your own secure password\n"
-               "6 - exit program\n");
+               "3 - store passwords\n"
+               "4 - get password\n"
+               "5 - remove password\n"
+               "6 - get help on making your own secure password\n"
+               "7 - exit program\n");
 
         if (fgets(response, response_capacity, stdin) == NULL) {
             fprintf(stderr, "failed to read input\n");
@@ -43,14 +44,17 @@ int main(int argc, char *argv[])
         //Checks if the response is one character.
         if (response[0] == '\0' || (response[1] != '\n' && response[1] != '\0')) {
             fprintf(stderr, "_________________________________________\n"
-                            "You must choose a number between 1 and 6.\n"
+                            "You must choose a number between 1 and 7.\n"
                             "_________________________________________\n");
             continue;
         }
 
         switch (response[0]) {
             case '1':
-                generate_passwords(&rand_initialized);
+                if (! generate_passwords(&rand_initialized)) {
+                    free(response);
+                    return EXIT_FAILURE;
+                }
                 break;
             case '2':
                 if (! password_strength()) {
@@ -73,6 +77,9 @@ int main(int argc, char *argv[])
                 //TODO call getting
                 break;
             case '5':
+                //TODO removing password
+                break;
+            case '6':
                 printf("\nA strong password is one that's easy for you to remember but difficult for others to guess.\n"
                        "Here are some things to consider when creating your passwords:\n"
                        "- never use personal information and information that can be found on social media about you\n"
@@ -96,12 +103,12 @@ int main(int argc, char *argv[])
                        "\n"
                        "Or you can use a password manager to manage your passwords, with this you can use completely random passwords.\n");
                 break;
-            case '6':
+            case '7':
                 free(response);
                 return EXIT_SUCCESS;
             default:
                 fprintf(stderr, "_________________________________________\n"
-                                "You must choose a number between 1 and 6.\n"
+                                "You must choose a number between 1 and 7.\n"
                                 "_________________________________________\n");
                 continue;
         }

@@ -4,6 +4,34 @@
 #define CHAR_POOL_LENGTH ('~' - ' ' + 1)
 
 /**
+ * @note This function will ask continuously until user answers with "y" or "n".
+ *
+ * @param question What you want to ask. (Will be added " [y/n]" at the end of the question)
+ * @param response Allocated memory with at least 3 chars. You must deallocate it yourself.
+ * @param response_capacity Capacity of response.
+ * @return true if user answered "y", false if they answered "n"
+ */
+bool yes_no_question(const char *question, char *response, int response_capacity)
+{
+    while (true) {
+        printf("%s [y/n]\n", question);
+        if (fgets(response, response_capacity, stdin) == NULL) {
+            fprintf(stderr, "failed to read response\n");
+            return false;
+        }
+        if (strlen(response) != 2) {
+            continue;
+        }
+        if (response[0] == 'y') {
+            return true;
+        }
+        if (response[0] == 'n') {
+            return false;
+        }
+    }
+}
+
+/**
  *
  * @param response Has to be allocated memory. After failure you have to free it.
  * @param response_capacity Capacity of response.
@@ -31,27 +59,8 @@ bool get_password_length(char *response, int response_capacity, long *length)
 
         if (8 <= *length && *length < 14) {
             printf("If you want to have a strong password I recommend having at least 14 characters.\n");
-            bool change_password = false;
-            while (true) {
-                printf("Would you like to change the password length to some higher number? [y/n]\n");
-                if (fgets(response, response_capacity, stdin) == NULL) {
-                    fprintf(stderr, "failed to read response\n");
-                    return false;
-                }
-                if (strlen(response) != 2) {
-                    continue;
-                }
-                if (response[0] == 'y') {
-                    change_password = true;
-                    break;
-                }
-                if (response[0] == 'n') {
-                    break;
-                }
-            }
-            if (change_password) {
+            if (yes_no_question("Would you like to change the password length to some higher number?", response, response_capacity)) {
                 *length = 0;
-                continue;
             }
         }
     }
@@ -66,7 +75,7 @@ bool get_password_length(char *response, int response_capacity, long *length)
  *                       To fit all the characters. After failure you have to free it.
  * @return true if successful, false otherwise.
  */
-bool get_character_pool(char *response, int response_capacity, char *character_pool)
+bool get_character_pool(char *response, int response_capacity, char *character_pool, int *char_pool_end_index)
 {
     printf("\nWrite which characters you don't want. Characters that are automatically included are all ASCII characters,\n"
            "those are all upper and lower case letters, all digits, space and these special characters:\n");
@@ -127,9 +136,13 @@ bool get_character_pool(char *response, int response_capacity, char *character_p
     if (character_pool[left] == '\1') {
         left--;
     }
+    *char_pool_end_index = left;
     return true;
 }
 
+/**
+ * @return true if OpenSSL's random functions are initialized; false otherwise
+ */
 bool initialize_generator(bool *rand_initialized)
 {
     if (*rand_initialized) {
@@ -151,7 +164,8 @@ bool initialize_generator(bool *rand_initialized)
     return true;
 }
 
-bool generate_password(char *response, char *character_pool, long length)
+
+bool generate_password(char *response, char *character_pool, int char_pool_end_index, long length, int response_capacity)
 {
     unsigned char *random_bytes = malloc(length * sizeof(unsigned char));
     if (random_bytes == NULL) {
@@ -166,13 +180,46 @@ bool generate_password(char *response, char *character_pool, long length)
         return false;
     }
 
+    bool safe_password = false;
+
+    if (yes_no_question("\nWould you like to safe the generated password? (NOT ENCRYPTED)\n", response, response_capacity)) {
+        safe_password = true;
+    }
+
+    if (! yes_no_question("\nYour password is going to be generated, make sure no one can see your password when it "
+                          "will be displayed.\nWould you like to generate it right now?\n", response, response_capacity)) {
+        free(random_bytes);
+        free(password);
+        return true;
+    }
+
     if (RAND_bytes(random_bytes, length) != 1) {
         fprintf(stderr, "failed to generate random numbers\n");
         free(random_bytes);
         free(password);
         return false;
     }
-    //TODO finish
+
+    int char_pool_index = 0;
+    char_pool_end_index++;
+
+    for (int i = 0; i < length; i++) {
+        char_pool_index = random_bytes[i] % char_pool_end_index;
+        password[i] = character_pool[char_pool_index];
+        random_bytes[i] = 0; //Just for safety
+    }
+    password[length] = '\0';
+
+    printf("Your password is: %s\n", password);
+
+    if (! safe_password) {
+        memset(password, 0, length);
+        free(password);
+        free(random_bytes);
+        return true;
+    }
+
+    return true;
 }
 
 bool generate_passwords(bool *rand_initialized)
@@ -201,7 +248,9 @@ bool generate_passwords(bool *rand_initialized)
         return false;
     }
 
-    if (! get_character_pool(response, response_capacity, character_pool)) {
+    int char_pool_end_index = 0;
+
+    if (! get_character_pool(response, response_capacity, character_pool, &char_pool_end_index)) {
         free(response);
         free(character_pool);
         return false;
@@ -213,10 +262,20 @@ bool generate_passwords(bool *rand_initialized)
         return false;
     }
 
-    while (true) {
+    bool another_password = true;
 
+    while (another_password) {
+        if (! generate_password(response, character_pool, char_pool_end_index, length, response_capacity)) {
+            free(response);
+            free(character_pool);
+            return false;
+        }
+        another_password = yes_no_question("Do you want to create another password with same length and character set as previous one?",
+                                           response, response_capacity);
     }
 
+    free(response);
+    free(character_pool);
     return true;
 }
 
