@@ -164,7 +164,6 @@ bool initialize_generator(bool *rand_initialized)
     return true;
 }
 
-
 bool generate_password(char *response, char *character_pool, int char_pool_end_index, long length, int response_capacity)
 {
     unsigned char *random_bytes = malloc(length * sizeof(unsigned char));

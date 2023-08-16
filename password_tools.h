@@ -17,12 +17,18 @@
 
 struct account_info {
     char *password;
+    int password_length;
+
     char *account_name;
+    int account_name_length;
 };
 
 struct site {
     char *name;
+    int name_length;
+
     struct account_info *accounts;
+    int account_count;
 };
 
 bool password_strength(void);
