@@ -15,22 +15,6 @@
 #define MAX_CHAR_RANGE (2 * LETTER_COUNT + DIGIT_COUNT + SPECIAL_CHARS)
 #define MAX_PASSWORD_LENGTH 32
 
-struct account_info {
-    char *password;
-    int password_length;
-
-    char *account_name;
-    int account_name_length;
-};
-
-struct site {
-    char *name;
-    int name_length;
-
-    struct account_info *accounts;
-    int account_count;
-};
-
 bool password_strength(void);
 bool generate_passwords(bool *rand_initialized);
 bool yes_no_question(const char *question, char *response, int response_capacity);

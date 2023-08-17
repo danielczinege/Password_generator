@@ -179,10 +179,10 @@ bool generate_password(char *response, char *character_pool, int char_pool_end_i
         return false;
     }
 
-    bool safe_password = false;
+    bool save_password = false;
 
-    if (yes_no_question("\nWould you like to safe the generated password? (NOT ENCRYPTED)\n", response, response_capacity)) {
-        safe_password = true;
+    if (yes_no_question("\nWould you like to save the generated password? (NOT ENCRYPTED)\n", response, response_capacity)) {
+        save_password = true;
     }
 
     if (! yes_no_question("\nYour password is going to be generated, make sure no one can see your password when it "
@@ -211,12 +211,13 @@ bool generate_password(char *response, char *character_pool, int char_pool_end_i
 
     printf("Your password is: %s\n", password);
 
-    if (! safe_password) {
+    if (! save_password) {
         memset(password, 0, length);
         free(password);
         free(random_bytes);
         return true;
     }
+
 
     return true;
 }
