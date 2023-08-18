@@ -1,7 +1,10 @@
 #include "password_tools.h"
+#include "data_saving.h"
+
 #include <openssl/rand.h>
 
 #define CHAR_POOL_LENGTH ('~' - ' ' + 1)
+#define LONGEST_NAME 128
 
 /**
  * @note This function will ask continuously until user answers with "y" or "n".
@@ -172,7 +175,7 @@ bool generate_password(char *response, char *character_pool, int char_pool_end_i
         return false;
     }
 
-    char *password = malloc((length + 1) * sizeof(char));
+    char *password = malloc((length + 2) * sizeof(char));
     if (password == NULL) {
         free(random_bytes);
         fprintf(stderr, "failed to allocate memory for password\n");
@@ -207,18 +210,90 @@ bool generate_password(char *response, char *character_pool, int char_pool_end_i
         password[i] = character_pool[char_pool_index];
         random_bytes[i] = 0; //Just for safety
     }
-    password[length] = '\0';
+    password[length] = '\n';
+    password[length + 1] = '\0';
+
+    free(random_bytes);
 
     printf("Your password is: %s\n", password);
 
     if (! save_password) {
         memset(password, 0, length);
         free(password);
-        free(random_bytes);
         return true;
     }
 
+    char *site_name = malloc((LONGEST_NAME + 1) * sizeof(char));
+    if (site_name == NULL) {
+        memset(password, 0, length);
+        free(password);
+        fprintf(stderr, "malloc failed\n");
+        return false;
+    }
 
+    char *account_name = malloc((LONGEST_NAME + 1) * sizeof(char));
+
+    if (account_name == NULL) {
+        memset(password, 0, length);
+        free(password);
+        free(site_name);
+        fprintf(stderr, "malloc failed\n");
+        return false;
+    }
+
+    struct account_info *account = malloc(sizeof(*account));
+    if (account == NULL) {
+        memset(password, 0, length);
+        free(password);
+        free(site_name);
+        free(account_name);
+        fprintf(stderr, "malloc failed\n");
+        return false;
+    }
+
+    account->account_name = account_name;
+    account->password = password;
+
+    printf("You chose to save this generated password,\n"
+           "please write to what site is this password: (you can write what you want here, it's just for you so that you can retrieve this password later)\n");
+
+    if (fgets(site_name, LONGEST_NAME + 1, stdin) == NULL) {
+        memset(password, 0, length);
+        free(password);
+        free(site_name);
+        free(account_name);
+        free(account);
+        fprintf(stderr, "failed to read input\n");
+        return false;
+    }
+
+    printf("And please write to what account is this password:\n");
+
+    if (fgets(account->account_name, LONGEST_NAME + 1, stdin) == NULL) {
+        memset(password, 0, length);
+        free(password);
+        free(site_name);
+        free(account_name);
+        free(account);
+        fprintf(stderr, "failed to read input\n");
+        return false;
+    }
+
+    //This saves the password
+    if (! save_or_delete_password(site_name, account)) {
+        memset(password, 0, length);
+        free(password);
+        free(site_name);
+        free(account_name);
+        free(account);
+        return false;
+    }
+
+    memset(password, 0, length);
+    free(password);
+    free(site_name);
+    free(account_name);
+    free(account);
     return true;
 }
 

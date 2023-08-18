@@ -19,4 +19,6 @@ struct site {
     int account_count;
 };
 
+bool save_or_delete_password(char *site_name, struct account_info *account);
+
 #endif //PASSWORD_GENERATOR_DATA_SAVING_H
