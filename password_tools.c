@@ -4,7 +4,6 @@
 #include <openssl/rand.h>
 
 #define CHAR_POOL_LENGTH ('~' - ' ' + 1)
-#define LONGEST_NAME 128
 
 /**
  * @note This function will ask continuously until user answers with "y" or "n".

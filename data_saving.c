@@ -1,4 +1,5 @@
 #include "data_saving.h"
+#include "password_tools.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -156,6 +157,11 @@ bool save_or_delete_password(char *site_name, struct account_info *account)
     char buffer[MAX_EXPECTED_LINE_LENGTH + 1];
 
     FILE *file = fopen(data_file, "a");
+    if (file == NULL) {
+        fprintf(stderr, "failed to open file with data\n");
+        return false;
+    }
+
     fclose(file);
 
     file = fopen(data_file, "r");
@@ -181,7 +187,17 @@ bool save_or_delete_password(char *site_name, struct account_info *account)
             }
             continue;
         }
-        fprintf(write, "%s", buffer);
+
+        size_t length = strlen(buffer) + 1;
+        char *name = malloc(length * sizeof(char));
+        if (name == NULL) {
+            fclose(file);
+            fclose(write);
+            fprintf(stderr,"malloc failed\n");
+            return false;
+        }
+
+        memcpy(name, buffer, length);
 
         if (fgets(buffer, MAX_EXPECTED_LINE_LENGTH, file) == NULL) {
             fclose(file);
@@ -216,7 +232,17 @@ bool save_or_delete_password(char *site_name, struct account_info *account)
             return false;
         }
 
-        if (found_account) {
+        if (account->password == NULL) {
+            if (! found_account) {
+                fprintf(stderr, "The account was not found.\n");
+                fprintf(write, "%s", name);
+                fprintf(write, "%ld\n", count);
+            } else if (count > 1) {
+                fprintf(write, "%s", name);
+                fprintf(write, "%ld\n", count - 1);
+            }
+            free(name);
+        } else if (found_account) {
             fprintf(write, "%ld\n", count);
         } else {
             fprintf(write, "%ld\n", count + 1);
@@ -233,7 +259,11 @@ bool save_or_delete_password(char *site_name, struct account_info *account)
         while (fgets(buffer, MAX_EXPECTED_LINE_LENGTH, file) != NULL) {
             fprintf(write, "%s", buffer);
         }
+
         if (feof(file)) {
+            fclose(file);
+            fclose(write);
+
             if (remove(data_file)) {
                 fprintf(stderr, "failed to change data_file\n");
                 return false;
@@ -248,6 +278,7 @@ bool save_or_delete_password(char *site_name, struct account_info *account)
 
         fclose(file);
         fclose(write);
+
         fprintf(stderr, "failed to read a line - data file was probably altered\n");
         return false;
     }
@@ -261,7 +292,12 @@ bool save_or_delete_password(char *site_name, struct account_info *account)
 
     fclose(file);
     if (account->password == NULL) {
+        fprintf(stderr, "The account was not found\n");
         fclose(write);
+        if (remove(aux_file)) {
+            fprintf(stderr, "failed to change data_file\n");
+            return false;
+        }
         return true;
     }
 
@@ -282,4 +318,270 @@ bool save_or_delete_password(char *site_name, struct account_info *account)
     }
 
     return true;
+}
+
+/**
+ * @note Asks for account info and calls save_or_delete_password
+ *
+ * @return true if successful, false otherwise
+ */
+bool get_and_remove_password(void)
+{
+    char *site_name = malloc((LONGEST_NAME + 1) * sizeof(char));
+    if (site_name == NULL) {
+        fprintf(stderr, "malloc failed\n");
+        return false;
+    }
+
+    char *account_name = malloc((LONGEST_NAME + 1) * sizeof(char));
+
+    if (account_name == NULL) {
+        free(site_name);
+        fprintf(stderr, "malloc failed\n");
+        return false;
+    }
+
+    struct account_info *account = malloc(sizeof(*account));
+    if (account == NULL) {
+        free(site_name);
+        free(account_name);
+        fprintf(stderr, "malloc failed\n");
+        return false;
+    }
+
+    account->account_name = account_name;
+    account->password = NULL;
+
+    printf("Please write which account data you want to delete:\n");
+
+    if (fgets(account->account_name, LONGEST_NAME + 1, stdin) == NULL) {
+        free(site_name);
+        free(account_name);
+        free(account);
+        fprintf(stderr, "failed to read input\n");
+        return false;
+    }
+
+    printf("Please write to what site is this account:\n");
+
+    if (fgets(site_name, LONGEST_NAME + 1, stdin) == NULL) {
+        free(site_name);
+        free(account_name);
+        free(account);
+        fprintf(stderr, "failed to read input\n");
+        return false;
+    }
+
+    if (! save_or_delete_password(site_name, account)) {
+        free(site_name);
+        free(account_name);
+        free(account);
+        return false;
+    }
+
+    free(site_name);
+    free(account_name);
+    free(account);
+    return true;
+}
+
+/**
+ * @note Asks for account info and calls save_or_delete_password
+ *
+ * @return true if successful, false otherwise
+ */
+bool get_and_save_password(void)
+{
+    char *site_name = malloc((LONGEST_NAME + 1) * sizeof(char));
+    if (site_name == NULL) {
+        fprintf(stderr, "malloc failed\n");
+        return false;
+    }
+
+    char *account_name = malloc((LONGEST_NAME + 1) * sizeof(char));
+
+    if (account_name == NULL) {
+        free(site_name);
+        fprintf(stderr, "malloc failed\n");
+        return false;
+    }
+
+    struct account_info *account = malloc(sizeof(*account));
+    if (account == NULL) {
+        free(site_name);
+        free(account_name);
+        fprintf(stderr, "malloc failed\n");
+        return false;
+    }
+
+    account->account_name = account_name;
+
+    account->password = malloc((MAX_EXPECTED_LINE_LENGTH + 1) * sizeof(char));
+    if (account->password == NULL) {
+        free(site_name);
+        free(account_name);
+        free(account);
+        fprintf(stderr, "malloc failed\n");
+        return false;
+    }
+
+    printf("Write the password that you want to save:\n");
+
+    if (fgets(account->password, MAX_EXPECTED_LINE_LENGTH + 1, stdin) == NULL) {
+        free(account->password);
+        free(site_name);
+        free(account_name);
+        free(account);
+        fprintf(stderr, "failed to read input\n");
+        return false;
+    }
+
+    account->password_length = strlen(account->password);
+
+    if (account->password_length == MAX_EXPECTED_LINE_LENGTH && account->password[MAX_EXPECTED_LINE_LENGTH - 1] != '\n') {
+        memset(account->password, 0, account->password_length);
+        free(account->password);
+        free(site_name);
+        free(account_name);
+        free(account);
+        fprintf(stderr, "The password is too long.\n");
+        return false;
+    }
+
+    printf("Please write to what site is this password: (you can write what you want here, it's just for you so that you can retrieve this password later)\n");
+
+    if (fgets(site_name, LONGEST_NAME + 1, stdin) == NULL) {
+        memset(account->password, 0, account->password_length);
+        free(account->password);
+        free(site_name);
+        free(account_name);
+        free(account);
+        fprintf(stderr, "failed to read input\n");
+        return false;
+    }
+
+    printf("And please write to what account is this password:\n");
+
+    if (fgets(account->account_name, LONGEST_NAME + 1, stdin) == NULL) {
+        memset(account->password, 0, account->password_length);
+        free(account->password);
+        free(site_name);
+        free(account_name);
+        free(account);
+        fprintf(stderr, "failed to read input\n");
+        return false;
+    }
+
+    if (! save_or_delete_password(site_name, account)) {
+        memset(account->password, 0, account->password_length);
+        free(account->password);
+        free(site_name);
+        free(account_name);
+        free(account);
+        return false;
+    }
+
+    memset(account->password, 0, account->password_length);
+    free(account->password);
+    free(site_name);
+    free(account_name);
+    free(account);
+    return true;
+}
+
+bool print_site(char *buffer, FILE *file)
+{
+    if (fgets(buffer, MAX_EXPECTED_LINE_LENGTH, file) == NULL) {
+        fprintf(stderr, "failed to read a line - data file was probably altered\n");
+        return false;
+    }
+
+    long count = strtol(buffer, NULL, 10);
+    if (0 >= count || errno == ERANGE) {
+        fprintf(stderr, "data file was probably altered\n");
+        return false;
+    }
+
+    count *= 2;
+
+    while (count > 0 && fgets(buffer, MAX_EXPECTED_LINE_LENGTH, file) != NULL) {
+        if (count % 2 == 0) {
+            printf("    Account name: %s", buffer);
+        } else {
+            printf("    Password: %s\n", buffer);
+        }
+        count--;
+    }
+
+    return count == 0;
+}
+
+bool print_all()
+{
+    char buffer[MAX_EXPECTED_LINE_LENGTH + 1];
+
+    FILE *file = fopen(data_file, "r");
+    if (file == NULL) {
+        fprintf(stderr, "failed to open data_file\n");
+        return false;
+    }
+
+    while (fgets(buffer, MAX_EXPECTED_LINE_LENGTH, file) != NULL) {
+        printf("\n%s", buffer);
+
+        if (! print_site(buffer, file)) {
+            fclose(file);
+            return false;
+        }
+    }
+
+    if (feof(file)) {
+        fclose(file);
+        return true;
+    }
+
+    fprintf(stderr, "failed to read a line\n");
+    fclose(file);
+    return false;
+}
+
+bool print_account_info()
+{
+    char buffer[4];
+    if (yes_no_question("Would you like to print passwords for all saved accounts?\n", buffer, 4)) {
+        return print_all();
+    }
+
+    char *site_name = malloc((LONGEST_NAME + 1) * sizeof(char));
+    if (site_name == NULL) {
+        fprintf(stderr, "malloc failed\n");
+        return false;
+    }
+
+    char *account_name = malloc((LONGEST_NAME + 1) * sizeof(char));
+
+    if (account_name == NULL) {
+        free(site_name);
+        fprintf(stderr, "malloc failed\n");
+        return false;
+    }
+
+    printf("Please write which account's password you want to show:\n");
+
+    if (fgets(account_name, LONGEST_NAME + 1, stdin) == NULL) {
+        free(site_name);
+        free(account_name);
+        fprintf(stderr, "failed to read input\n");
+        return false;
+    }
+
+    printf("Please write to what site is this account:\n");
+
+    if (fgets(site_name, LONGEST_NAME + 1, stdin) == NULL) {
+        free(site_name);
+        free(account_name);
+        fprintf(stderr, "failed to read input\n");
+        return false;
+    }
+    //TODO
 }

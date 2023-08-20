@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "password_tools.h"
+#include "data_saving.h"
 
 int main(int argc, char *argv[])
 {
@@ -71,13 +72,22 @@ int main(int argc, char *argv[])
                        "\n");
                 break;
             case '3':
-                //TODO call storing
+                if (! get_and_save_password()) {
+                    free(response);
+                    return EXIT_FAILURE;
+                }
                 break;
             case '4':
-                //TODO call getting
+                if (! print_account_info()) {
+                    free(response);
+                    return EXIT_FAILURE;
+                }
                 break;
             case '5':
-                //TODO removing password
+                if (! get_and_remove_password()) {
+                    free(response);
+                    return EXIT_FAILURE;
+                }
                 break;
             case '6':
                 printf("\nA strong password is one that's easy for you to remember but difficult for others to guess.\n"
