@@ -31,13 +31,13 @@ bool load_until_account(char *account_name, long account_count, struct account_i
     *loaded_count = 0;
 
     for (long i = 0; i < account_count; i++) {
-        if (fgets(buffer, MAX_EXPECTED_LINE_LENGTH, file) == NULL) {
+        if (fgets(buffer, MAX_EXPECTED_LINE_LENGTH + 1, file) == NULL) {
             fprintf(stderr, "failed to read a line - data file was probably altered\n");
             return false;
         }
 
         if (strcmp(buffer, account_name) == 0) {
-            if (fgets(buffer, MAX_EXPECTED_LINE_LENGTH, file) == NULL) {
+            if (fgets(buffer, MAX_EXPECTED_LINE_LENGTH + 1, file) == NULL) {
                 fprintf(stderr, "failed to read a line - data file was probably altered\n");
                 return false;
             }
@@ -62,7 +62,7 @@ bool load_until_account(char *account_name, long account_count, struct account_i
 
         memcpy(account->account_name, buffer, account->account_name_length + 1);
 
-        if (fgets(buffer, MAX_EXPECTED_LINE_LENGTH, file) == NULL) {
+        if (fgets(buffer, MAX_EXPECTED_LINE_LENGTH + 1, file) == NULL) {
             fprintf(stderr, "failed to read a line - data file was probably altered\n");
             free(account->account_name);
             free(account);
@@ -122,7 +122,7 @@ void write_loaded_accounts(struct account_info **accounts, int loaded_count, FIL
  */
 bool skip_to_another_site(FILE *file, FILE *write, char *buffer)
 {
-    if (fgets(buffer, MAX_EXPECTED_LINE_LENGTH, file) == NULL) {
+    if (fgets(buffer, MAX_EXPECTED_LINE_LENGTH + 1, file) == NULL) {
         fprintf(stderr, "failed to read a line - data file was probably altered\n");
         return false;
     }
@@ -139,7 +139,7 @@ bool skip_to_another_site(FILE *file, FILE *write, char *buffer)
 
     count *= 2;
 
-    while (count > 0 && fgets(buffer, MAX_EXPECTED_LINE_LENGTH, file) != NULL) {
+    while (count > 0 && fgets(buffer, MAX_EXPECTED_LINE_LENGTH + 1, file) != NULL) {
         if (write != NULL) {
             fprintf(write, "%s", buffer);
         }
@@ -182,7 +182,7 @@ bool save_or_delete_password(char *site_name, struct account_info *account)
         return false;
     }
 
-    while (fgets(buffer, MAX_EXPECTED_LINE_LENGTH, file) != NULL) {
+    while (fgets(buffer, MAX_EXPECTED_LINE_LENGTH + 1, file) != NULL) {
         if (strcmp(buffer, site_name) != 0) {
             fprintf(write, "%s", buffer);
             if (! skip_to_another_site(file, write, buffer)) {
@@ -204,7 +204,8 @@ bool save_or_delete_password(char *site_name, struct account_info *account)
 
         memcpy(name, buffer, length);
 
-        if (fgets(buffer, MAX_EXPECTED_LINE_LENGTH, file) == NULL) {
+        if (fgets(buffer, MAX_EXPECTED_LINE_LENGTH + 1, file) == NULL) {
+            free(name);
             fclose(file);
             fclose(write);
             fprintf(stderr, "failed to read a line - data file was probably altered\n");
@@ -214,6 +215,7 @@ bool save_or_delete_password(char *site_name, struct account_info *account)
         long count = strtol(buffer, NULL, 10);
         if (0 >= count || errno == ERANGE) {
             fprintf(stderr, "data file was probably altered\n");
+            free(name);
             fclose(write);
             fclose(file);
             return false;
@@ -222,6 +224,7 @@ bool save_or_delete_password(char *site_name, struct account_info *account)
         struct account_info **accounts = malloc(count * sizeof(*accounts));
         if (accounts == NULL) {
             fprintf(stderr, "malloc failed\n");
+            free(name);
             fclose(write);
             fclose(file);
             return false;
@@ -232,6 +235,7 @@ bool save_or_delete_password(char *site_name, struct account_info *account)
 
         if (! load_until_account(account->account_name, count, accounts, buffer, file, &found_account, &loaded_count)) {
             free_accounts(accounts, loaded_count);
+            free(name);
             fclose(file);
             fclose(write);
             return false;
@@ -246,12 +250,15 @@ bool save_or_delete_password(char *site_name, struct account_info *account)
                 fprintf(write, "%s", name);
                 fprintf(write, "%ld\n", count - 1);
             }
-            free(name);
         } else if (found_account) {
+            fprintf(write, "%s", name);
             fprintf(write, "%ld\n", count);
         } else {
+            fprintf(write, "%s", name);
             fprintf(write, "%ld\n", count + 1);
         }
+
+        free(name);
 
         write_loaded_accounts(accounts, loaded_count, write);
         free_accounts(accounts, loaded_count);
@@ -261,7 +268,7 @@ bool save_or_delete_password(char *site_name, struct account_info *account)
             fprintf(write, "%s", account->password);
         }
 
-        while (fgets(buffer, MAX_EXPECTED_LINE_LENGTH, file) != NULL) {
+        while (fgets(buffer, MAX_EXPECTED_LINE_LENGTH + 1, file) != NULL) {
             fprintf(write, "%s", buffer);
         }
 
@@ -494,9 +501,16 @@ bool get_and_save_password(void)
     return true;
 }
 
+/**
+ * @note reads lines from <file> until all accounts from current site are read and writes them in formatted form to stdin.
+ *
+ * @param file file with data
+ * @param buffer at least 1000 characters long
+ * @return true if no error occurs, false otherwise
+ */
 bool print_site(char *buffer, FILE *file)
 {
-    if (fgets(buffer, MAX_EXPECTED_LINE_LENGTH, file) == NULL) {
+    if (fgets(buffer, MAX_EXPECTED_LINE_LENGTH + 1, file) == NULL) {
         fprintf(stderr, "failed to read a line - data file was probably altered\n");
         return false;
     }
@@ -509,7 +523,7 @@ bool print_site(char *buffer, FILE *file)
 
     count *= 2;
 
-    while (count > 0 && fgets(buffer, MAX_EXPECTED_LINE_LENGTH, file) != NULL) {
+    while (count > 0 && fgets(buffer, MAX_EXPECTED_LINE_LENGTH + 1, file) != NULL) {
         if (count % 2 == 0) {
             printf("    Account name: %s", buffer);
         } else {
@@ -521,6 +535,9 @@ bool print_site(char *buffer, FILE *file)
     return count == 0;
 }
 
+/**
+ * @note Prints all saved accounts with their passwords.
+ */
 bool print_all()
 {
     char buffer[MAX_EXPECTED_LINE_LENGTH + 1];
@@ -531,7 +548,7 @@ bool print_all()
         return false;
     }
 
-    while (fgets(buffer, MAX_EXPECTED_LINE_LENGTH, file) != NULL) {
+    while (fgets(buffer, MAX_EXPECTED_LINE_LENGTH + 1, file) != NULL) {
         printf("\n%s", buffer);
 
         if (! print_site(buffer, file)) {
@@ -550,16 +567,26 @@ bool print_all()
     return false;
 }
 
+/**
+ * @note You must read site name and account_count alone and then this reads through accounts and prints the password if
+ *  the account is there.
+ *
+ * @param file File with data
+ * @param account_count Number of accounts saved for this site
+ * @param account_name What we are looking for
+ * @param buffer at least 1000 characters long
+ * @return true if no error occurs, false otherwise
+ */
 bool find_and_print_password(FILE *file, long account_count, char *account_name, char *buffer)
 {
     for (long i = 0; i < account_count; i++) {
-        if (fgets(buffer, MAX_EXPECTED_LINE_LENGTH, file) == NULL) {
+        if (fgets(buffer, MAX_EXPECTED_LINE_LENGTH + 1, file) == NULL) {
             fprintf(stderr, "failed to read a line - data file was probably altered\n");
             return false;
         }
 
         if (strcmp(buffer, account_name) == 0) {
-            if (fgets(buffer, MAX_EXPECTED_LINE_LENGTH, file) == NULL) {
+            if (fgets(buffer, MAX_EXPECTED_LINE_LENGTH + 1, file) == NULL) {
                 fprintf(stderr, "failed to read a line - data file was probably altered\n");
                 return false;
             }
@@ -567,7 +594,7 @@ bool find_and_print_password(FILE *file, long account_count, char *account_name,
             return true;
         }
 
-        if (fgets(buffer, MAX_EXPECTED_LINE_LENGTH, file) == NULL) {
+        if (fgets(buffer, MAX_EXPECTED_LINE_LENGTH + 1, file) == NULL) {
             fprintf(stderr, "failed to read a line - data file was probably altered\n");
             return false;
         }
@@ -576,6 +603,11 @@ bool find_and_print_password(FILE *file, long account_count, char *account_name,
     return true;
 }
 
+/**
+ * @param site_name On what site is this account.
+ * @param account_name Name of the account we want password of.
+ * @return true if no error occurs, false otherwise
+ */
 bool print_password(char *site_name, char *account_name)
 {
     FILE *file = fopen(data_file, "r");
@@ -586,7 +618,7 @@ bool print_password(char *site_name, char *account_name)
 
     char buffer[MAX_EXPECTED_LINE_LENGTH + 1];
 
-    while (fgets(buffer, MAX_EXPECTED_LINE_LENGTH, file) != NULL) {
+    while (fgets(buffer, MAX_EXPECTED_LINE_LENGTH + 1, file) != NULL) {
         if (strcmp(buffer, site_name) != 0) {
             if (! skip_to_another_site(file, NULL, buffer)) {
                 fclose(file);
@@ -605,7 +637,8 @@ bool print_password(char *site_name, char *account_name)
 
         memcpy(name, buffer, length);
 
-        if (fgets(buffer, MAX_EXPECTED_LINE_LENGTH, file) == NULL) {
+        if (fgets(buffer, MAX_EXPECTED_LINE_LENGTH + 1, file) == NULL) {
+            free(name);
             fclose(file);
             fprintf(stderr, "failed to read a line - data file was probably altered\n");
             return false;
@@ -614,16 +647,19 @@ bool print_password(char *site_name, char *account_name)
         long count = strtol(buffer, NULL, 10);
         if (0 >= count || errno == ERANGE) {
             fprintf(stderr, "data file was probably altered\n");
+            free(name);
             fclose(file);
             return false;
         }
 
         printf("The password for this account ");
         if (! find_and_print_password(file, count, account_name, buffer)) {
+            free(name);
             fclose(file);
             return false;
         }
 
+        free(name);
         fclose(file);
         return true;
     }
@@ -631,6 +667,9 @@ bool print_password(char *site_name, char *account_name)
     return true;
 }
 
+/**
+ * @note Asks you whether you want to print all saved passwords or one particular password and prints it.
+ */
 bool print_account_info()
 {
     char buffer[4];

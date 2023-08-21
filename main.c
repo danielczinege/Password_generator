@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
                     free(response);
                     return EXIT_FAILURE;
                 }
-                printf("But if this test says your password is strong it still might be weak.\n"
+                printf("\nBut if this test says your password is strong it still might be weak.\n"
                        "For example if your password consists of some regular word, even with some\n"
                        "commonly used substitutions and few numbers after it, it still can be weak.\n"
                        "Example of password that is hard to find by randomly selecting passwords, but\n"
@@ -90,7 +90,9 @@ int main(int argc, char *argv[])
                 }
                 break;
             case '6':
-                printf("\nA strong password is one that's easy for you to remember but difficult for others to guess.\n"
+                printf("\n"
+                       "==============================================================================================================\n"
+                       "A strong password is one that's easy for you to remember but difficult for others to guess.\n"
                        "Here are some things to consider when creating your passwords:\n"
                        "- never use personal information and information that can be found on social media about you\n"
                        "- use longer passwords (at least 14 to 16 characters)\n"
@@ -111,7 +113,8 @@ int main(int argc, char *argv[])
                        "(e.g 2BorNot2B_ThatisThe? (To be or not to be, that is the question-Shakespeare),\n"
                        " 1gbeFnw8f:)              (I go bowling every Friday night with 8 friends)\n"
                        "\n"
-                       "Or you can use a password manager to manage your passwords, with this you can use completely random passwords.\n");
+                       "Or you can use a password manager to manage your passwords, with this you can use completely random passwords.\n"
+                       "==============================================================================================================\n");
                 break;
             case '7':
                 free(response);
