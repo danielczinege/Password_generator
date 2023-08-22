@@ -8,6 +8,9 @@ add_executable(Password_generator
 
 target_link_libraries(Password_generator PRIVATE m)
 
+# Find OpenSSL and set its variables
 find_package(OpenSSL REQUIRED)
 include_directories(${OPENSSL_INCLUDE_DIR})
-target_link_libraries(Password_generator PRIVATE OpenSSL::SSL OpenSSL::Crypto)
+
+# Link against OpenSSL libraries (static)
+target_link_libraries(Password_generator PRIVATE ${OPENSSL_SSL_LIBRARY} ${OPENSSL_CRYPTO_LIBRARY})
