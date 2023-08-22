@@ -13,14 +13,6 @@ struct account_info {
     int account_name_length;
 };
 
-struct site {
-    char *name;
-    int name_length;
-
-    struct account_info *accounts;
-    int account_count;
-};
-
 bool save_or_delete_password(char *site_name, struct account_info *account);
 bool get_and_save_password(void);
 bool get_and_remove_password(void);
